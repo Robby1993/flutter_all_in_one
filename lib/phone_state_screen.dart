@@ -1,54 +1,16 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:phone_state/phone_state.dart';
 
-import 'back_services.dart';
-
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Permission.notification.isDenied.then(
-    (value) {
-      if (value) {
-        Permission.notification.request();
-      }
-    },
-  );
-  await initializeService();
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
+class PhoneStateScreen extends StatefulWidget {
+  const PhoneStateScreen({Key? key}) : super(key: key);
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<PhoneStateScreen> createState() => _PhoneStateScreenState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  String text = "Stop Service";
-
+class _PhoneStateScreenState extends State<PhoneStateScreen> {
   PhoneState status = PhoneState.nothing();
   bool granted = false;
 
@@ -71,11 +33,16 @@ class _MyHomePageState extends State<MyHomePage> {
     return value;
   }
 
+
   @override
   void initState() {
     super.initState();
     if (Platform.isIOS) setStream();
+
+
   }
+
+
   void setStream() {
     PhoneState.stream.listen((event) {
       setState(() {
@@ -90,61 +57,29 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: const Text("Phone State"),
+        centerTitle: true,
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            ElevatedButton(
-              onPressed: () {
-                FlutterBackgroundService().invoke('setAsForeground');
-              },
-              child: const Text("Foreground Service"),
-            ), // ElevatedButton
-            ElevatedButton(
-              onPressed: () {
-                FlutterBackgroundService().invoke('setAsBackground');
-              },
-              child: const Text("Background Service"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final service = FlutterBackgroundService();
-                bool isRunning = await service.isRunning();
-                if (isRunning) {
-                  service.invoke("stopService");
-                } else {
-                  service.startService();
-                }
-                if (!isRunning) {
-                  text = "Stop Service";
-                } else {
-                  text = "Start Service";
-                }
-                setState(() {
-
-                });
-              },
-              child: Text(text),
-            ),
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
             if (Platform.isAndroid)
-              ElevatedButton(
+              MaterialButton(
                 onPressed: !granted
                     ? () async {
-                  bool temp = await requestPermission();
-                  setState(() {
-                    granted = temp;
-                    if (granted) {
-                      setStream();
-                    }
-                  });
-                }
+                        bool temp = await requestPermission();
+                        setState(() {
+                          granted = temp;
+                          if (granted) {
+                            setStream();
+                          }
+                        });
+                      }
                     : null,
                 child: const Text("Request permission of Phone"),
               ),
-
             const Text(
               "Status of call",
               style: TextStyle(fontSize: 24),
