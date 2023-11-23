@@ -1,11 +1,18 @@
 import 'dart:io';
 
+import 'package:all_in_one/page_name.dart';
+import 'package:all_in_one/route_generator.dart';
+import 'package:all_in_one/screens/first_screen.dart';
+import 'package:all_in_one/utilities/my_share_preference.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:phone_state/phone_state.dart';
+import 'package:url_strategy/url_strategy.dart';
 
-import 'back_services.dart';
+import 'helper/link_handler.dart';
+import 'services/back_services.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,180 +24,99 @@ void main() async {
     },
   );
   await initializeService();
-  runApp(const MyApp());
+  bool isLongedIn =
+      await MySharedPreferences.getBoolData(MySharedPreferences.isLongedIn);
+  // Register our protocol only on Windows platform
+  //_registerWindowsProtocol();
+  setPathUrlStrategy();
+  runApp(MyApp(isLongedIn));
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class MyApp extends StatefulWidget {
+  bool isLongedIn;
+
+  MyApp(this.isLongedIn, {super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  /* final RoutemasterDelegate _routemaster = RoutemasterDelegate(
+    routesBuilder: (context) {
+      if (Provider.of<ProAppSettings>(context).isLoggedIn) {
+        return loggedInRoutes;
+      } else {
+        return loggedOutRoutes;
+      }
+    },
+  );*/
+
+ // late final LinkHandler _linkHandler = LinkHandler(onLink: (link) => _routemaster.push(link));
+  late final LinkHandler _linkHandler = LinkHandler(onLink: (link){
+    //_navigatorKey.currentState?.pushNamed(uri.fragment);
+   // _navigatorKey.currentState?.pushNamed(link);
+  });
+  final _navigatorKey = GlobalKey<NavigatorState>();
+  @override
+  void initState() {
+    super.initState();
+    _linkHandler.init();
+  }
+
+  @override
+  void dispose() {
+    _linkHandler.dispose();
+    super.dispose();
+  }
 
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: _navigatorKey,
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
+      initialRoute: widget.isLongedIn ? PageName.home : PageName.firstPage,
+      //initialRoute: PageName.firstPage,
+      onGenerateRoute: RouteGenerator.generateRoute,
+      /*onGenerateRoute: (RouteSettings settings) {
+        Widget routeWidget = const FirstScreen();
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  String text = "Stop Service";
-
-  PhoneState status = PhoneState.nothing();
-  bool granted = false;
-
-  Future<bool> requestPermission() async {
-    var status = await Permission.phone.request();
-    var value = false;
-    if (status == PermissionStatus.denied) {
-      value = false;
-    } else if (status == PermissionStatus.restricted) {
-      value = false;
-    } else if (status == PermissionStatus.limited) {
-      value = false;
-    } else if (status == PermissionStatus.permanentlyDenied) {
-      value = false;
-    } else if (status == PermissionStatus.provisional) {
-      value = true;
-    } else if (status == PermissionStatus.granted) {
-      value = true;
-    }
-    return value;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    if (Platform.isIOS) setStream();
-  }
-  void setStream() {
-    PhoneState.stream.listen((event) {
-      setState(() {
-        if (event != null) {
-          status = event;
+        // Mimic web routing
+        final routeName = settings.name;
+        if (routeName != null) {
+          *//*if (routeName.startsWith('/book/')) {
+            // Navigated to /book/:id
+            routeWidget = customScreen(
+              routeName.substring(routeName.indexOf('/book/')),
+            );
+          } else if (routeName == '/book') {
+            // Navigated to /book without other parameters
+            routeWidget = customScreen("None");
+          }*//*
         }
-      });
-    });
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            ElevatedButton(
-              onPressed: () {
-                FlutterBackgroundService().invoke('setAsForeground');
-              },
-              child: const Text("Foreground Service"),
-            ), // ElevatedButton
-            ElevatedButton(
-              onPressed: () {
-                FlutterBackgroundService().invoke('setAsBackground');
-              },
-              child: const Text("Background Service"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final service = FlutterBackgroundService();
-                bool isRunning = await service.isRunning();
-                if (isRunning) {
-                  service.invoke("stopService");
-                } else {
-                  service.startService();
-                }
-                if (!isRunning) {
-                  text = "Stop Service";
-                } else {
-                  text = "Start Service";
-                }
-                setState(() {
-
-                });
-              },
-              child: Text(text),
-            ),
-            if (Platform.isAndroid)
-              ElevatedButton(
-                onPressed: !granted
-                    ? () async {
-                  bool temp = await requestPermission();
-                  setState(() {
-                    granted = temp;
-                    if (granted) {
-                      setStream();
-                    }
-                  });
-                }
-                    : null,
-                child: const Text("Request permission of Phone"),
-              ),
-
-            const Text(
-              "Status of call",
-              style: TextStyle(fontSize: 24),
-            ),
-            if (status.status == PhoneStateStatus.CALL_INCOMING ||
-                status.status == PhoneStateStatus.CALL_STARTED)
-              Text(
-                "Number: ${status.number}",
-                style: const TextStyle(fontSize: 24),
-              ),
-            Icon(
-              getIcons(),
-              color: getColor(),
-              size: 80,
-            )
-          ],
-        ),
-      ),
+        return MaterialPageRoute(
+          builder: (context) => routeWidget,
+          settings: settings,
+          fullscreenDialog: true,
+        );
+      },*/
     );
   }
 
-  IconData getIcons() {
-    var value = Icons.clear;
-    if (status.status == PhoneStateStatus.NOTHING) {
-      value = Icons.clear;
-    } else if (status.status == PhoneStateStatus.CALL_INCOMING) {
-      value = Icons.add_call;
-    } else if (status.status == PhoneStateStatus.CALL_STARTED) {
-      value = Icons.call;
-    } else if (status.status == PhoneStateStatus.CALL_ENDED) {
-      value = Icons.call_end;
+  void _registerWindowsProtocol() {
+    // Register our protocol only on Windows platform
+    if (!kIsWeb) {
+      if (Platform.isWindows) {
+       // registerProtocolHandler("kWindowsScheme");
+        //unregisterProtocolHandler("kWindowsScheme"),
+      }
     }
-    return value;
-  }
-
-  Color getColor() {
-    var value = Colors.red;
-    if (status.status == PhoneStateStatus.NOTHING) {
-      value = Colors.red;
-    } else if (status.status == PhoneStateStatus.CALL_INCOMING) {
-      value = Colors.green;
-    } else if (status.status == PhoneStateStatus.CALL_STARTED) {
-      value = Colors.orange;
-    } else if (status.status == PhoneStateStatus.CALL_ENDED) {
-      value = Colors.red;
-    }
-    return value;
   }
 }
+
