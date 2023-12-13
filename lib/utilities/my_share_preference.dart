@@ -6,6 +6,7 @@ class MySharedPreferences {
   static String userLocation = "userLocation";
   static String isLongedIn = "isLongedIn";
   static String isProfileUpdate = "isProfileUpdate";
+  static String isOnBoarding = "isOnBoarding";
 
   /// Saving String to Shared Preferences
   static void saveString(String key, String value) async {

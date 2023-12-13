@@ -1,16 +1,15 @@
 import 'dart:io';
 
-import 'package:all_in_one/page_name.dart';
-import 'package:all_in_one/route_generator.dart';
-import 'package:all_in_one/screens/first_screen.dart';
-import 'package:all_in_one/utilities/my_share_preference.dart';
+import 'package:all_in_one/app_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:phone_state/phone_state.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_strategy/url_strategy.dart';
 
+import 'app_router.dart';
 import 'helper/link_handler.dart';
 import 'services/back_services.dart';
 
@@ -24,18 +23,23 @@ void main() async {
     },
   );
   await initializeService();
-  bool isLongedIn =
-      await MySharedPreferences.getBoolData(MySharedPreferences.isLongedIn);
-  // Register our protocol only on Windows platform
-  //_registerWindowsProtocol();
   setPathUrlStrategy();
-  runApp(MyApp(isLongedIn));
+  final SharedPreferences sharedPreferences =
+      await SharedPreferences.getInstance();
+  runApp(
+    MyApp(
+      sharedPreferences: sharedPreferences,
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
-  bool isLongedIn;
+  final SharedPreferences sharedPreferences;
 
-  MyApp(this.isLongedIn, {super.key});
+  const MyApp({
+    Key? key,
+    required this.sharedPreferences,
+  }) : super(key: key);
 
   @override
   State<MyApp> createState() => _MyAppState();
@@ -51,16 +55,17 @@ class _MyAppState extends State<MyApp> {
       }
     },
   );*/
-
- // late final LinkHandler _linkHandler = LinkHandler(onLink: (link) => _routemaster.push(link));
-  late final LinkHandler _linkHandler = LinkHandler(onLink: (link){
+  late AppService appService;
+  // late final LinkHandler _linkHandler = LinkHandler(onLink: (link) => _routemaster.push(link));
+  late final LinkHandler _linkHandler = LinkHandler(onLink: (link) {
     //_navigatorKey.currentState?.pushNamed(uri.fragment);
-   // _navigatorKey.currentState?.pushNamed(link);
+    // _navigatorKey.currentState?.pushNamed(link);
   });
-  final _navigatorKey = GlobalKey<NavigatorState>();
+
   @override
   void initState() {
     super.initState();
+    appService = AppService(widget.sharedPreferences);
     _linkHandler.init();
   }
 
@@ -70,42 +75,25 @@ class _MyAppState extends State<MyApp> {
     super.dispose();
   }
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: _navigatorKey,
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
+    return  MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AppService>(create: (_) => appService),
+        Provider<AppRouter>(create: (_) => AppRouter(appService)),
+      ],
+      child: Builder(
+        builder: (context) {
+          final GoRouter goRouter = Provider.of<AppRouter>(context, listen: false).goRouter;
+          return MaterialApp.router(
+            title: "Router App",
+            debugShowCheckedModeBanner: false,
+            routeInformationProvider: goRouter.routeInformationProvider,
+            routeInformationParser: goRouter.routeInformationParser,
+            routerDelegate: goRouter.routerDelegate,
+          );
+        },
       ),
-      initialRoute: widget.isLongedIn ? PageName.home : PageName.firstPage,
-      //initialRoute: PageName.firstPage,
-      onGenerateRoute: RouteGenerator.generateRoute,
-      /*onGenerateRoute: (RouteSettings settings) {
-        Widget routeWidget = const FirstScreen();
-
-        // Mimic web routing
-        final routeName = settings.name;
-        if (routeName != null) {
-          *//*if (routeName.startsWith('/book/')) {
-            // Navigated to /book/:id
-            routeWidget = customScreen(
-              routeName.substring(routeName.indexOf('/book/')),
-            );
-          } else if (routeName == '/book') {
-            // Navigated to /book without other parameters
-            routeWidget = customScreen("None");
-          }*//*
-        }
-
-        return MaterialPageRoute(
-          builder: (context) => routeWidget,
-          settings: settings,
-          fullscreenDialog: true,
-        );
-      },*/
     );
   }
 
@@ -113,10 +101,9 @@ class _MyAppState extends State<MyApp> {
     // Register our protocol only on Windows platform
     if (!kIsWeb) {
       if (Platform.isWindows) {
-       // registerProtocolHandler("kWindowsScheme");
+        // registerProtocolHandler("kWindowsScheme");
         //unregisterProtocolHandler("kWindowsScheme"),
       }
     }
   }
 }
-

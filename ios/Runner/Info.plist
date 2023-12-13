@@ -50,5 +50,21 @@
     <array>
         <string>dev.flutter.background.refresh</string>
     </array>
+
+    <key>FlutterDeepLinkingEnabled</key>
+    <true/>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>CFBundleURLName</key>
+        <string>dwirandyh.medium.com</string>
+        <key>CFBundleURLSchemes</key>
+        <array>
+        <string>appscheme</string>
+        </array>
+        </dict>
+    </array>
 </dict>
 </plist>
